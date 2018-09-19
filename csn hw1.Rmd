@@ -1,0 +1,76 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(igraph)
+library(emdbook)
+```
+
+
+```{r}
+step = 15
+nodes = 1000
+neigh = 4
+n_sim = 100
+
+probs = lseq(from=0.0001, to=1, length.out = step)
+probs_vect = rep(probs, each= n_sim)
+
+norm_graph = watts.strogatz.game(dim = 1, size = nodes, nei = neigh, 0)
+nrm_trans = transitivity(norm_graph)
+nrm_apl = average.path.length(norm_graph)
+
+cc = function(g) {
+  transitivity(g)/nrm_trans
+  }
+
+apl = function(g){
+  average.path.length(g)/nrm_apl
+}
+
+create_ws = function(p){
+  watts.strogatz.game(1,nodes, neigh,p)
+}
+
+graphs = lapply(probs_vect, create_ws)
+
+cluster_coeffs = sapply(graphs, cc)
+apl_coeffs = sapply(graphs, apl)
+```
+
+```{r}
+cluster_coeffs = .colMeans(cluster_coeffs, 100, 15)
+apl_coeffs = .colMeans(apl_coeffs, 100, 15)
+```
+
+```{r}
+plot(x = probs, y = cluster_coeffs, type = "o", log="x")
+points(x = probs, y = apl_coeffs, col = "red", lty=2)
+lines(x = probs, y = apl_coeffs, col = "red")
+axis(2) # normal y axis
+axis(4) # normal y axis on right side of plot
+box()
+```
+
+```{r}
+n_nodes = seq(from = 1, to = 15000, by=150)
+probs_er = c(0.5, 0.6, 0.7)
+
+n_nodes_vect = rep(n_nodes, each= n_sim)
+
+sp = function(g, nodes){
+  shortest.paths(g, v = 0, to = nodes)
+}
+
+create_er = function(n, p){
+  erdos.renyi.game(n ,p)
+}
+```
+
+```{r}
+plot(graphs[1])
+
+```
+
