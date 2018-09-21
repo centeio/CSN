@@ -55,22 +55,33 @@ box()
 ```
 
 ```{r}
-n_nodes = seq(from = 1, to = 15000, by=150)
-probs_er = c(0.5, 0.6, 0.7)
+n_nodes = round(lseq(from = 2, to = 500, length.out = 150),0)
+#probs_er = c(0.5, 0.6, 0.7)
 
+# vector of nodes
 n_nodes_vect = rep(n_nodes, each= n_sim)
 
-sp = function(g, nodes){
-  shortest.paths(g, v = 0, to = nodes)
+
+# shortest path function
+sp = function(g){
+  shortest.paths(g)
 }
 
-create_er = function(n, p){
-  erdos.renyi.game(n ,p)
+# erdos renyi graph
+create_er_0.5= function(n){
+  erdos.renyi.game(n , p.or.m = 0.7)
 }
+
+# create the graphs
+er_graphs = lapply(n_nodes_vect, create_er_0.5)
+
+# evaluate shortest path lenght
+
+sp_coeff = sapply(er_graphs, average.path.length)
+sp_coeff = .colMeans(sp_coeff, 100, 150, na.rm = TRUE)
 ```
 
 ```{r}
-plot(graphs[1])
-
+plot(x=n_nodes, y = sp_coeff, log = "x")
 ```
 
