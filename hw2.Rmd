@@ -1,0 +1,199 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+require(stats4)
+require(VGAM)
+```
+
+
+```{r}
+#FUNCTIONS
+
+# get the -2LogLikelihood of a function
+get_2LL = function(x){
+  attributes(summary(x))$m2logL
+}
+
+# get the MLE of a parameter
+get_estimate = function(x){
+  attributes(summary(x))$coef[1]
+}
+
+# C constant of displaced Poisson
+logf <- function(i){
+  sum(log(seq(1, i)))
+}
+
+# minus log-likelihood of the displaced poisson function
+minus_log_likelihood_poiss = function(lambda){
+  -M*log(lambda)
+  +N*(lambda+log(1-exp(-lambda)))
+  +C
+}
+
+# minus log-likelihood of displaced geometric distribution
+minus_log_likelihood_geom <- function(q){
+  -N*log(q)-(M-N)*log(1-q)
+}
+
+# minus log-likelihood of zeta distribution with fixed exponent (2)
+minus_log_likelihood_zeta2 = function() {
+  2*sum(log(x))
+  +length(x)*log(pi^2/6)
+}
+
+# minus log-likelihood of zeta function
+minus_log_likelihood_zeta <- function(gamma) {
+length(x) * log(zeta(gamma)) + gamma * sum(log(x))
+}
+
+# hmax function - harmonic number function
+hmax = function(kmax, gamma){
+  k_list = seq(1,kmax)
+  out = sum(k_list^(-gamma))
+  return(out)
+}
+
+# minus log-likelihood of zeta right truncated function
+minus_log_likelihood_rt_zeta <- function(gamma, kmax) {
+  gamma*sum(log(x)) + length(x)*hmax(kmax, gamma)
+}
+
+# function to compute the Akaike Information Criterion
+get_AIC <- function(m2logL,K,N) {
+a = m2logL + 2*K*N/(N-K-1)# AIC with a correction for sample size
+return(a)
+}
+```
+
+
+```{r}
+source("summary_table.R")
+```
+
+```{r}
+degree_sequence = read.delim("./data/English_degree_sequence.txt", header = FALSE)
+x = degree_sequence$V1
+```
+
+
+```{r}
+M = sum(x)
+M_prime = sum(log(x))
+N = length(x)
+
+C = 0
+for(i in 1:length(x)){
+  C = C+logf(x[i])
+}
+```
+
+```{r}
+# MLE POISSON
+mle_pois <- mle(minus_log_likelihood_poiss,
+            start = list(lambda = M/N),
+            method = "L-BFGS-B",
+            lower = c(0.0000001))
+
+# MLE GEOM
+mle_geom = mle(minus_log_likelihood_geom,
+               start = list(q = N/M),
+               method = "L-BFGS-B",
+               lower  = c(0.0000001),
+               uppper = c(0.999999))
+
+# MLE ZETA
+mle_zeta <- mle(minus_log_likelihood_zeta,
+                start = list(gamma = 2),
+                method = "BFGS",
+                lower = c(1.0000001))
+
+  
+# MLE RT ZETA
+mle_zeta_rt <- mle(minus_log_likelihood_rt_zeta,
+                   start = list(gamma = 2, kmax=N),
+                   method = "L-BFGS-B",
+                   lower = c(1.0000001))
+```
+
+
+```{r}
+# get the mle of the parameters of each distribution
+lambda = get_estimate(mle_pois)
+q      = get_estimate(mle_geom)
+y1     = get_estimate(mle_zeta)
+y2     = get_estimate(mle_zeta_rt)
+```
+
+
+```{r}
+# number of parameters for each distribution
+K = c(1,1,1,2)
+
+# 2+loglikelihoof of each function
+ll_pois = get_2LL(mle_pois)
+ll_geom = get_2LL(mle_geom)
+ll_zeta = get_2LL(mle_zeta)
+ll_rtz  = get_2LL(mle_zeta_rt)
+
+2L = c(ll_pois, ll_geom, ll_zeta, ll_rtz)
+
+AIC_vect = rep(NA, length(K))
+for (i in 1:length(K)){
+  AIC_vect[i] = get_AIC(2L[i],K = K[i], N )
+}
+
+best = min(AIC_vect)
+AIC_delta = -AIC_vect-best
+```
+
+
+```{r}
+optim(fn = minus_log_likelihood_geom, par = list(lambda=M/N), method = "L-BFGS-B", control=list(trace=6) )
+```
+
+
+
+```{r}
+mle_zeta <- mle(minus_log_likelihood_zeta,
+                start = list(gamma = 2),
+                method = "L-BFGS-B",
+                lower = c(1.0000001))
+```
+
+
+
+```{r}
+degree_sequence = read.delim("./data/test/samples_from_discrete_distributions/data/sample_of_geometric_with_parameter_0.8.txt", header = FALSE)
+y = degree_sequence$V1
+```
+
+
+```{r}
+My = sum(y)
+M_primey = sum(log(y))
+Ny = length(y)
+```
+
+```{r}
+mle_g <- mle(minus_log_likelihood_geom,
+                start = list(q=Ny/My),
+                method = "L-BFGS-B",
+                lower = c(0.0000001),
+                upper = c(0.9999999))
+
+
+mle_pois <- mle(minus_log_likelihood_poiss,
+            start = list(lambda = My/Ny),
+            method = "L-BFGS-B",
+            lower = c(0.0000001))
+```
+
+
+
+
+
+
