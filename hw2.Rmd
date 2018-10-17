@@ -9,7 +9,7 @@ require(VGAM)
 ```
 
 
-```{r}
+```{r Functions}
 #FUNCTIONS
 
 # get the -2LogLikelihood of a function
@@ -26,6 +26,8 @@ get_estimate = function(x){
 logf <- function(i){
   sum(log(seq(1, i)))
 }
+
+# MINUS LOG-LIKELIHOOD OF CANDIDATE DISTRIBUTIONS
 
 # minus log-likelihood of the displaced poisson function
 minus_log_likelihood_poiss = function(lambda){
@@ -47,7 +49,7 @@ minus_log_likelihood_zeta2 = function() {
 
 # minus log-likelihood of zeta function
 minus_log_likelihood_zeta <- function(gamma) {
-length(x) * log(zeta(gamma)) + gamma * sum(log(x))
+  length(x) * log(zeta(gamma)) + gamma * sum(log(x))
 }
 
 # hmax function - harmonic number function
@@ -62,136 +64,182 @@ minus_log_likelihood_rt_zeta <- function(gamma, kmax) {
   gamma*sum(log(x)) + length(x)*hmax(kmax, gamma)
 }
 
+# AIC EVALUATION
 # function to compute the Akaike Information Criterion
 get_AIC <- function(m2logL,K,N) {
-a = m2logL + 2*K*N/(N-K-1)# AIC with a correction for sample size
-return(a)
+  a = m2logL + 2*K*N/(N-K-1)# AIC with a correction for sample size
+  return(a)
 }
-```
 
+# ALTMANN FUNCTION
+altmann_ll = function(gamma) {
+  val = 0
+  for(i in 1:length(x)){
+    val = val - gamma*(M_prime+log(x))}
+}
 
-```{r}
-source("summary_table.R")
-```
-
-```{r}
-degree_sequence = read.delim("./data/English_degree_sequence.txt", header = FALSE)
-x = degree_sequence$V1
-```
-
-
-```{r}
-M = sum(x)
-M_prime = sum(log(x))
-N = length(x)
-
-C = 0
-for(i in 1:length(x)){
-  C = C+logf(x[i])
+alt = function(gamma, delta){
+  val = 0
+  for(i in 1:length(x)){
+    val = val-((1/(sum(x^(-gamma)*exp(-delta*x))))*x^(-gamma)*exp(-delta*x))
+  }
 }
 ```
 
 ```{r}
-# MLE POISSON
-mle_pois <- mle(minus_log_likelihood_poiss,
-            start = list(lambda = M/N),
-            method = "L-BFGS-B",
-            lower = c(0.0000001))
+languages = list.files(path = "./data/", pattern = "*.txt", full.names = TRUE)
+```
 
-# MLE GEOM
-mle_geom = mle(minus_log_likelihood_geom,
-               start = list(q = N/M),
-               method = "L-BFGS-B",
-               lower  = c(0.0000001),
-               uppper = c(0.999999))
 
-# MLE ZETA
-mle_zeta <- mle(minus_log_likelihood_zeta,
-                start = list(gamma = 2),
-                method = "BFGS",
-                lower = c(1.0000001))
+```{r}
+# number of parameters for each distribution(geometric, zeta, rt zeta) -- POISSON MISSING
+K = c(1,1,2)
+params_vector = matrix(data = NA, nrow = length(languages), ncol = length(K)+1)
+AIC_vect      = matrix(data = NA, nrow = length(languages), ncol = length(K))
+AIC_delta     = matrix(data = NA, nrow = length(languages), ncol = length(K)) 
 
+colnames(params_vector) = c("q", "gamma_zeta", "gamma rt zeta", "kmax")
+colnames(AIC_vect)      = c("GEO", "ZETA", "RT ZETA")
+colnames(AIC_delta)     = c("GEO", "ZETA", "RT ZETA")
+
+rownames(params_vector) = c("Arabic", "Basque", "Catalan", "Chinese", "Czech", 
+                            "English", "Greek", "Hungarian", "Italian", "Turkish")
+rownames(AIC_vect) = c("Arabic", "Basque", "Catalan", "Chinese", "Czech", 
+                       "English", "Greek", "Hungarian", "Italian", "Turkish")
+rownames(AIC_delta) = c("Arabic", "Basque", "Catalan", "Chinese", "Czech", 
+                        "English", "Greek", "Hungarian", "Italian", "Turkish")
+```
+
+```{r}
+for(i in 1:length(languages)){
+  degree_sequence = read.delim(languages[i], header = FALSE)
+  x = degree_sequence$V1
   
-# MLE RT ZETA
-mle_zeta_rt <- mle(minus_log_likelihood_rt_zeta,
-                   start = list(gamma = 2, kmax=N),
-                   method = "L-BFGS-B",
-                   lower = c(1.0000001))
-```
-
-
-```{r}
-# get the mle of the parameters of each distribution
-lambda = get_estimate(mle_pois)
-q      = get_estimate(mle_geom)
-y1     = get_estimate(mle_zeta)
-y2     = get_estimate(mle_zeta_rt)
-```
-
-
-```{r}
-# number of parameters for each distribution
-K = c(1,1,1,2)
-
-# 2+loglikelihoof of each function
-ll_pois = get_2LL(mle_pois)
-ll_geom = get_2LL(mle_geom)
-ll_zeta = get_2LL(mle_zeta)
-ll_rtz  = get_2LL(mle_zeta_rt)
-
-2L = c(ll_pois, ll_geom, ll_zeta, ll_rtz)
-
-AIC_vect = rep(NA, length(K))
-for (i in 1:length(K)){
-  AIC_vect[i] = get_AIC(2L[i],K = K[i], N )
+  # hyperparameters of interest
+  M = sum(x)
+  M_prime = sum(log(x))
+  N = length(x)
+  C = 0
+  for(j in 1:length(x)){
+    C = C+logf(x[j])
+  }
+  lower_k = max(x)
+  
+  # MLE POISSON
+  # mle_pois <- mle(minus_log_likelihood_poiss,
+  #            start = list(lambda = M/N),
+  #            method = "L-BFGS-B",
+  #            lower = c(0.0000001))
+  
+  # MLE GEOM
+  mle_geom <- mle(minus_log_likelihood_geom,
+                  start = list(q=N/M),
+                  method = "L-BFGS-B",
+                  lower = c(0.0000001),
+                  upper = c(0.9999999))
+  
+  # MLE ZETA
+  mle_zeta <- mle(minus_log_likelihood_zeta,
+                  start = list(gamma = 2),
+                  method = "L-BFGS-B",
+                  lower = c(1.0000001))
+  
+  # MLE RT ZETA
+  gamma_opt = mle(minus_log_likelihood_rt_zeta,
+                  start = list(gamma = 1.00001),
+                  fixed = list(kmax = lower_k),
+                  method = "L-BFGS-B",
+                  lower = c(1.00001))
+  
+  mle_zeta_rt = mle(minus_log_likelihood_rt_zeta,
+                    start = list(kmax = lower_k),
+                    fixed = list(gamma = get_estimate(gamma_opt)),
+                    method = "L-BFGS-B",
+                    lower = c(lower_k))
+  
+  # get the mle of the parameters of each distribution
+  #lambda = get_estimate(mle_pois)
+  #q      = get_estimate(mle_geom)
+  #y1     = get_estimate(mle_zeta)
+  #kmax   =  get_estimate(mle_zeta_rt)
+  # gamma optimal value already retrieved
+  
+  params_vector[i,] = c(get_estimate(mle_geom), 
+                        get_estimate(mle_zeta), 
+                        get_estimate(gamma_opt),
+                        get_estimate(mle_zeta_rt))
+  
+  # -2logLikelihood of each function
+  #ll_pois = get_2LL(mle_pois)
+  ll_geom = get_2LL(mle_geom)
+  ll_zeta = get_2LL(mle_zeta)
+  ll_rtz  = get_2LL(mle_zeta_rt)
+  
+  # -2logL -- POISSON MISSING
+  L = c(ll_geom, ll_zeta, ll_rtz)
+  
+  # AIC value for each distribution
+  for (z in 1:length(K)){
+    AIC_vect[i,z] = get_AIC(L[z], K[z], N )
+  }
+  
+  # best AIC value
+  best = min(AIC_vect[i,])
+  
+  # evaluating the delta AIC
+  AIC_delta[i,] = AIC_vect[i,]-best
 }
-
-best = min(AIC_vect)
-AIC_delta = -AIC_vect-best
 ```
 
-
 ```{r}
-optim(fn = minus_log_likelihood_geom, par = list(lambda=M/N), method = "L-BFGS-B", control=list(trace=6) )
+params_vector
 ```
 
-
+```{r}
+AIC_vect
+```
 
 ```{r}
-mle_zeta <- mle(minus_log_likelihood_zeta,
-                start = list(gamma = 2),
-                method = "L-BFGS-B",
-                lower = c(1.0000001))
+AIC_delta
 ```
 
 
 
 ```{r}
-degree_sequence = read.delim("./data/test/samples_from_discrete_distributions/data/sample_of_geometric_with_parameter_0.8.txt", header = FALSE)
-y = degree_sequence$V1
+q = mle(alt,
+        start = list(gamma=0.001, delta = 0.001),
+        method = "L-BFGS-B",
+        lower = c(0.0000001, 0.0000001))
 ```
+
+
+
+
+
+
+
+
+
 
 
 ```{r}
-My = sum(y)
-M_primey = sum(log(y))
-Ny = length(y)
+lower_k = max(y)
+# MLE RT ZETA
+optgamma = function (ki) {
+  mle_zeta_rt <- mle(minus_log_likelihood_rt_zeta,
+                     start = list(gamma = 1.00001),
+                     fixed = list(kmax = ki),
+                     method = "L-BFGS-B",
+                     lower = c(1.00001))
+  return(attributes(summary(mle_zeta_rt))$coef[1])}
+
+#mle_zeta_rt <- mle(optgamma,
+#                   start = list(kmax = lower_k),
+#                   method = "L-BFGS-B",
+#                   lower = c(lower_k))
+
+a = optim(fn = optgamma, par = list(kmax = max(y)), method = "L-BFGS-B", lower = c(max(y)))
 ```
-
-```{r}
-mle_g <- mle(minus_log_likelihood_geom,
-                start = list(q=Ny/My),
-                method = "L-BFGS-B",
-                lower = c(0.0000001),
-                upper = c(0.9999999))
-
-
-mle_pois <- mle(minus_log_likelihood_poiss,
-            start = list(lambda = My/Ny),
-            method = "L-BFGS-B",
-            lower = c(0.0000001))
-```
-
 
 
 
