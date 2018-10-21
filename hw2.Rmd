@@ -18,8 +18,8 @@ get_2LL = function(x){
 }
 
 # get the MLE of a parameter
-get_estimate = function(x){
-  attributes(summary(x))$coef[1]
+get_estimate = function(x,i){
+  attributes(summary(x))$coef[i]
 }
 
 # C constant of displaced Poisson
@@ -31,9 +31,9 @@ logf <- function(i){
 
 # minus log-likelihood of the displaced poisson function
 minus_log_likelihood_poiss = function(lambda){
-  -M*log(lambda)
-  +N*(lambda+log(1-exp(-lambda)))
-  +C
+  -(M*log(lambda)
+  -N*(lambda+log(1-exp(-lambda)))
+  -C)
 }
 
 # minus log-likelihood of displaced geometric distribution
@@ -71,18 +71,23 @@ get_AIC <- function(m2logL,K,N) {
   return(a)
 }
 
-# ALTMANN FUNCTION
-altmann_ll = function(gamma) {
-  val = 0
-  for(i in 1:length(x)){
-    val = val - gamma*(M_prime+log(x))}
-}
+# ALTMANN Log-Likelihood FUNCTION
 
-alt = function(gamma, delta){
-  val = 0
+altmann_ll = function(gamma_alt, delta){
+  csum = 0
   for(i in 1:length(x)){
-    val = val-((1/(sum(x^(-gamma)*exp(-delta*x))))*x^(-gamma)*exp(-delta*x))
+    csum = csum + (i^(-gamma_alt))*(exp(-delta*i))
   }
+  c = 1/csum
+  
+  
+  result = 0
+  for(i in 1:length(x)){
+    result = result - (log(c) + (-gamma_alt)*log(x[i]) + (-delta*x[i]))
+  }
+  
+  return(result)
+
 }
 ```
 
@@ -92,15 +97,17 @@ languages = list.files(path = "./data/", pattern = "*.txt", full.names = TRUE)
 
 
 ```{r}
-# number of parameters for each distribution(geometric, zeta, rt zeta) -- POISSON MISSING
-K = c(1,1,2)
-params_vector = matrix(data = NA, nrow = length(languages), ncol = length(K)+1)
+# number of parameters for each distribution(poisson, geometric, zeta, rt zeta)
+K = c(1,1,1,2,2)
+params_vector = matrix(data = NA, nrow = length(languages), ncol = length(K)+2)
 AIC_vect      = matrix(data = NA, nrow = length(languages), ncol = length(K))
-AIC_delta     = matrix(data = NA, nrow = length(languages), ncol = length(K)) 
+AIC_delta     = matrix(data = NA, nrow = length(languages), ncol = length(K)-1)
+new_AIC_delta = matrix(data = NA, nrow = length(languages), ncol = length(K))
 
-colnames(params_vector) = c("q", "gamma_zeta", "gamma rt zeta", "kmax")
-colnames(AIC_vect)      = c("GEO", "ZETA", "RT ZETA")
-colnames(AIC_delta)     = c("GEO", "ZETA", "RT ZETA")
+colnames(params_vector) = c("lambda", "q", "gamma_zeta", "gamma rt zeta", "kmax", "gamma", "delta")
+colnames(AIC_vect)      = c("POISSON", "GEO", "ZETA", "RT ZETA", "ALTMANN")
+colnames(AIC_delta)     = c("POISSON", "GEO", "ZETA", "RT ZETA")
+colnames(new_AIC_delta)     = c("POISSON", "GEO", "ZETA", "RT ZETA", "ALTMANN")
 
 rownames(params_vector) = c("Arabic", "Basque", "Catalan", "Chinese", "Czech", 
                             "English", "Greek", "Hungarian", "Italian", "Turkish")
@@ -108,6 +115,9 @@ rownames(AIC_vect) = c("Arabic", "Basque", "Catalan", "Chinese", "Czech",
                        "English", "Greek", "Hungarian", "Italian", "Turkish")
 rownames(AIC_delta) = c("Arabic", "Basque", "Catalan", "Chinese", "Czech", 
                         "English", "Greek", "Hungarian", "Italian", "Turkish")
+rownames(new_AIC_delta) = c("Arabic", "Basque", "Catalan", "Chinese", "Czech", 
+                        "English", "Greek", "Hungarian", "Italian", "Turkish")
+
 ```
 
 ```{r}
@@ -125,11 +135,11 @@ for(i in 1:length(languages)){
   }
   lower_k = max(x)
   
-  # MLE POISSON
-  # mle_pois <- mle(minus_log_likelihood_poiss,
-  #            start = list(lambda = M/N),
-  #            method = "L-BFGS-B",
-  #            lower = c(0.0000001))
+  #MLE POISSON
+  mle_pois <- mle(minus_log_likelihood_poiss,
+            start = list(lambda = M/N),
+            method = "L-BFGS-B",
+            lower = c(1.0000001))
   
   # MLE GEOM
   mle_geom <- mle(minus_log_likelihood_geom,
@@ -153,41 +163,48 @@ for(i in 1:length(languages)){
   
   mle_zeta_rt = mle(minus_log_likelihood_rt_zeta,
                     start = list(kmax = lower_k),
-                    fixed = list(gamma = get_estimate(gamma_opt)),
+                    fixed = list(gamma = get_estimate(gamma_opt,1)),
                     method = "L-BFGS-B",
                     lower = c(lower_k))
   
-  # get the mle of the parameters of each distribution
-  #lambda = get_estimate(mle_pois)
-  #q      = get_estimate(mle_geom)
-  #y1     = get_estimate(mle_zeta)
-  #kmax   =  get_estimate(mle_zeta_rt)
-  # gamma optimal value already retrieved
   
-  params_vector[i,] = c(get_estimate(mle_geom), 
-                        get_estimate(mle_zeta), 
-                        get_estimate(gamma_opt),
-                        get_estimate(mle_zeta_rt))
+  #MLE Altmann
+  mle_altmann = mle(altmann_ll,
+        start = list(gamma_alt=1.001, delta = 0.001),
+        method = "L-BFGS-B",
+        lower = c(1.0000001, 0.0000001))
+  
+  params_vector[i,] = c(get_estimate(mle_pois,1),
+                        get_estimate(mle_geom,1), 
+                        get_estimate(mle_zeta,1), 
+                        get_estimate(gamma_opt,1),
+                        get_estimate(mle_zeta_rt,1),
+                        get_estimate(mle_altmann,1),
+                        get_estimate(mle_altmann,2))
   
   # -2logLikelihood of each function
-  #ll_pois = get_2LL(mle_pois)
+  ll_pois = get_2LL(mle_pois)
   ll_geom = get_2LL(mle_geom)
   ll_zeta = get_2LL(mle_zeta)
   ll_rtz  = get_2LL(mle_zeta_rt)
+  ll_altmann = get_2LL(mle_altmann)
   
-  # -2logL -- POISSON MISSING
-  L = c(ll_geom, ll_zeta, ll_rtz)
+  # -2logL
+  L = c(ll_pois, ll_geom, ll_zeta, ll_rtz, ll_altmann)
   
   # AIC value for each distribution
   for (z in 1:length(K)){
     AIC_vect[i,z] = get_AIC(L[z], K[z], N )
   }
   
+
   # best AIC value
-  best = min(AIC_vect[i,])
+  best = min(AIC_vect[i,1:(length(K)-1)])
+  best2 = min(AIC_vect[i,])
   
   # evaluating the delta AIC
-  AIC_delta[i,] = AIC_vect[i,]-best
+  AIC_delta[i,] = AIC_vect[i,1:(length(K)-1)]-best
+  new_AIC_delta[i,] = AIC_vect[i,] - best2
 }
 ```
 
@@ -203,27 +220,19 @@ AIC_vect
 AIC_delta
 ```
 
+```{r}
+new_AIC_delta
+```
 
 
 ```{r}
-q = mle(alt,
-        start = list(gamma=0.001, delta = 0.001),
-        method = "L-BFGS-B",
-        lower = c(0.0000001, 0.0000001))
+
 ```
 
 
 
-
-
-
-
-
-
-
-
 ```{r}
-lower_k = max(y)
+lower_k = max(x)
 # MLE RT ZETA
 optgamma = function (ki) {
   mle_zeta_rt <- mle(minus_log_likelihood_rt_zeta,
@@ -238,7 +247,7 @@ optgamma = function (ki) {
 #                   method = "L-BFGS-B",
 #                   lower = c(lower_k))
 
-a = optim(fn = optgamma, par = list(kmax = max(y)), method = "L-BFGS-B", lower = c(max(y)))
+a = optim(fn = optgamma, par = list(kmax = max(x)), method = "L-BFGS-B", lower = c(max(x)))
 ```
 
 
