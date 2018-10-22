@@ -107,11 +107,11 @@ altmann_distribution = function(gamma_alt, delta) {
 ```
 
 ### INTRODUCTION
-We are asked here to analyse the degree distribution of global syntatic dependency networks (one network for each language). In other words vertices of these networks are words (word types) and two vertices ( two words ) are linked if they have been linked at least once in a dependency treebank.
+In this project, we are asked to analyse the degree distribution of global syntatic dependency networks (one network for each language). In other words, the vertices of these networks are words (_word types_) and two vertices (two words) are linked if they have been linked at least once in a dependency treebank.
 
-In details, the degree distributions of each language can follow an unknown distribution that we want try to catch/approximate. What we want to do then is called model selection: we start with a bunch of proposal distributions choosen a priori (possibly parametric distribution in order to use the tuning of the parameter to find the best fit for our data) evaluate their best parameter(s) according to the data with Maximum Likelihood Estimation and then compare the proposal models with the Akaike Informatio Criterion and see which one fit best our data.
+In more detail, the degree distributions of each language can follow an unknown distribution that we want try to find. What we want to do then is then called model selection: we start with a bunch of proposal distributions choosen a priori (possibly parametric distribution in order to use the tuning of the parameter to find the best fit for our data), evaluate their best parameter(s) according to the data with Maximum Likelihood Estimation and then we compare the proposal models with the Akaike Informatio Criterion and see which one fits our data best.
 
-The model suggested in the task are
+The model suggested in this task are:
 
 \[
 \text{Geometric distribution:} \quad p(k)=(1-q)^{k-1}q \quad\text{allowing p(0)=0}
@@ -128,7 +128,7 @@ The model suggested in the task are
 \text{Right truncated distribution:} \quad p(k)=\frac{k^{-\gamma}}{H(kmax, \gamma)}
 \]
 
-Since we are not allowing for unconnected node (e.g unconnected words) some changes on the original implementation of Poisson distribution and Geometric were needed
+Since we are not allowing unconnected nodes (e.g unconnected words) some changes on the original implementation of Poisson distribution and Geometric were needed
 
 
 
@@ -161,7 +161,7 @@ rownames(new_AIC_delta) = c("Arabic", "Basque", "Catalan", "Chinese", "Czech",
 
 ### RESULTS
 
-The code below read each undirected network corresponding to one of each language and evaluate the MLE for the parameter(s) of each candidate distribution. After that it evaluates the AIC criterion of the model and compare them finding the best AIC. The model selection is carry out with and without including the Altmann function. In this way we can check the goodness of this last model to approximate degree distribution of words. Visual fitting is generated for each language and each model used. 
+The code below reads each undirected network corresponding to one of each language and evaluates the MLE for the parameter(s) of each candidate distribution. After that, it evaluates the AIC criterion of the model and compares them, finding the best AIC. The model selection is carried out both with and without including the Altmann function. In this way, we can check how good this last model is to the degree distribution of words. Visual fitting is generated for each language and each model used. 
 
 ```{r warning=FALSE}
 
@@ -314,11 +314,11 @@ new_AIC_delta
 
 ### DISCUSSION
 
-Looking at the AIC table showed (the one without the Altmann function) it is easy to see how the zeta distribution function is able to approximate better than the other candidates the unknown degree distribution. Geometric distribution is the one that after the zeta better approximate the underlying distribuion. Right truncated zeta and Poisson (particularly the last one) are far from catching a good approximation. This can be seen also visually.. Poisson distribution is always vary different from shape of the histogram of the data.
+Looking at the AIC table showed (the one without the Altmann function), it is easy to see how the zeta distribution function is able to approximate better than the other candidates the unknown degree distribution. Geometric distribution is the one that after the zeta to better approximate the underlying distribuion. Right truncated zeta and Poisson (particularly the last one) are far from giving a good approximation. This can be seen also visually. Poisson distribution is always very different from shape of the histogram of the data.
 
-Including, in a second moment, the Altmann function we see how this distribution is able to outperform its rivals. However in languages like Greek or Bask the Zeta distribution seems also to work well and be closer to the Altmann.
+Including, in a second moment, the Altmann function, we see how this distribution is able to outperform its rivals. However, in languages like Greek or Bask the Zeta distribution seems also to work well and be closer to the Altmann.
 
-When plotting we faced the problem of giving a good data visualization. All the languages present long tail because exists few words that show a really high degree. To avoid this issue, when plotting, we choose to show up to the 0.95 percentile of the distribution discarding the last 5% of the distribution located in high values of degree.
+When plotting, we faced the problem of giving a good data visualization. All the languages present long tails because there exists few words that show a really high degree. To avoid this issue, when plotting, we choose to show up to the 0.95 percentile of the distribution discarding the last 5% of the distribution located in high values of degree.
 
 ### METHODS
 ```{r}
@@ -327,7 +327,7 @@ x = degree_sequence$V1
 fit_power_law(x)
 ```
 
-Notice however that the values of the Right truncated distribution can be affected by the not properly implementation of the MLE optimization. Since we were getting errors optimizing with respect to the Kmax value following the suggestion of the Prof Marta Arias we split the optimization proces in two different parts: first we optimize first the $\gamma$ parameter keeping Kmax fixed to the higher degree value found in the degree distribution; then keeping $\gamma = \gamma_{MLE}$ we optimize the second parameter Kmax. We are aware is not a proper optimization process but at least allow us to get some values to use in comparison part.
+Notice, however, that the values of the Right truncated distribution can be affected by the not properly implementation of the MLE optimization. Since we were sure that MLE was performing well (since Kmax would not be optimized; instead it would stick to the given valuea), following the suggestion of the Prof. Marta Arias, we splitted the optimization process in two different parts: first, we optimize first the $\gamma$ parameter keeping Kmax fixed to the higher degree value found in the degree distribution; then keeping $\gamma = \gamma_{MLE}$ we optimize the second parameter Kmax. We are aware this is not a proper optimization process but, at least, it allows us to get some values to use in comparison part.
 
 When computing the pmf of the Poisson distribution in each given point we were getting some "out of bound" warnings caused to some high degree present in the Arabic language. A factorial of an high value can causes crashes since 170 is the last value for which R can compute the factorial. 
 
