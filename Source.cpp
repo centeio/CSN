@@ -61,9 +61,9 @@ int geo(int u, int v, Graph &g){ //addapted from https://www.geeksforgeeks.org/m
 	if (g.d[v][u] != -1){
 		return g.d[v][u];
 	}
-
+	
 	if (g.adja[u].size() == 1){
-		if (g.d[g.adja[u][0]][v] != -1)
+		if ((g.d[g.adja[u][0]][v] != -1) && g.d[g.adja[u][0]][v] != INT_MAX)
 			return g.d[g.adja[u][0]][v] + 1;
 	}
 
@@ -78,15 +78,21 @@ int geo(int u, int v, Graph &g){ //addapted from https://www.geeksforgeeks.org/m
 	queue <int> Q;
 	distance[u] = 0;
 
+	//cout << "visited, distance: " << visited.size() << " " << distance.size() << "\n";
+
 	Q.push(u);
 	visited[u] = true;
 	while (!Q.empty())
 	{
 		int x = Q.front();
 		Q.pop();
+		//cout << "X: " << x << "\n";
 
 		for (unsigned int i = 0; i<g.adja[x].size(); i++)
 		{
+			//cout << "i: " << i << "\n";
+			//cout << "g.adja[x][i]: " << g.adja[x][i] << "\n";
+
 			if (distance[g.adja[x][i]] > (distance[x] + 1)){
 				distance[g.adja[x][i]] = distance[x] + 1;
 			}
@@ -101,6 +107,8 @@ int geo(int u, int v, Graph &g){ //addapted from https://www.geeksforgeeks.org/m
 		}
 	}
 	g.d[u] = distance;
+
+	//cout << "leaving with distance[v]: " << distance[v] << "\n";
 
 	return distance[v];
 }
@@ -158,6 +166,7 @@ float mclosenesscent(Graph &g){
 Graph readFiles(string filename){
 	ifstream gfile;
 	string vi, vj;
+	int edges = 0;
 
 	Graph g;
 
@@ -174,7 +183,8 @@ Graph readFiles(string filename){
 	}
 
 	while (gfile >> vi >> vj) {
-		addEdge(vi, vj, g);
+		if (addEdge(vi, vj, g))
+			edges++;
 	}
 
 	return g;
@@ -211,26 +221,62 @@ Graph switching(Graph g){
 	newg.N = g.N;
 	newg.E = g.E;
 	newg.adja = g.adja;
-	int Q = g.N*log(g.N);
+	int Q = newg.N*log(newg.N);
 	int QE = Q*newg.E;
 
+	for (int i = 0; i < newg.N; i++) {
+		vector<int> dists(newg.N, -1);
+		newg.d.push_back(dists);
+	}
+
 	for (int i = 0; i < QE; i++){
-		int n1, n2;
+		int n1, n2, n3, n4, posn3, posn4;
+		
 		do{
-			n1 = rand() % newg.N;
-			n2 = rand() % newg.N;
-		} while (!(n1 != n2 && newg.adja[n1].size() > 0 && newg.adja[n2].size() > 0));
+			do{
+				n1 = rand() % newg.N;
+				n2 = rand() % newg.N;
+			} while (!(n1 != n2 && newg.adja[n1].size() > 0 && newg.adja[n2].size() > 0));
 
-		int posn3 = rand() % newg.adja[n1].size();
-		int posn4 = rand() % newg.adja[n2].size();
+			posn3 = rand() % newg.adja[n1].size();
+			posn4 = rand() % newg.adja[n2].size();
 
-		int n3 = newg.adja[n1][posn3];
-		int n4 = newg.adja[n2][posn4];
+			n3 = newg.adja[n1][posn3];
+			n4 = newg.adja[n2][posn4];
+		} while (n3 == n4 || n2 == n3 || n1 == n4 );
+		//while (n3 == n4);
 
-		if(addEdgeint(n1, n2, newg))
-			newg.adja[n1].erase(newg.adja[n1].begin() + posn3);
-		if(addEdgeint(n3, n4, newg))
-			newg.adja[n2].erase(newg.adja[n2].begin() + posn4);
+		//cout << "n1: " << n1 << " " << "n3: " << n3 << " " << "n2: " << n2 << " " << "n4: " << n4 << "\n";
+
+
+		//cout << "newg.adja size: " << newg.adja.size() << "\n";
+
+		//-1 distance matrix
+		for (int i = 0; i < newg.d.size(); i++) {
+			for (int j = 0; j < newg.d[i].size(); j++){
+				newg.d[i][j] = -1;
+			}
+		}
+
+		//erase edges
+		newg.adja[n1].erase(newg.adja[n1].begin() + posn3);
+		newg.adja[n3].erase(find(newg.adja[n3].begin(), newg.adja[n3].end(), n1));
+		newg.adja[n2].erase(newg.adja[n2].begin() + posn4);
+		newg.adja[n4].erase(find(newg.adja[n4].begin(), newg.adja[n4].end(), n2));
+
+		if (!addEdgeint(n1, n2, newg)){
+			addEdgeint(n1, n3, newg);
+			addEdgeint(n2, n4, newg);
+			continue;
+		}
+		if (!addEdgeint(n3, n4, newg)){
+			//find position of n2 in adjacency of n1
+			//erase edge
+			newg.adja[n1].erase(find(newg.adja[n1].begin(), newg.adja[n1].end(), n2));
+			newg.adja[n2].erase(find(newg.adja[n2].begin(), newg.adja[n2].end(), n1));
+			addEdgeint(n1, n3, newg);
+			addEdgeint(n2, n4, newg);
+		}
 	}
 	return newg;
 
@@ -239,13 +285,16 @@ Graph switching(Graph g){
 int main(){
 	srand(time(NULL));
 
-	//Graph g = readFiles("C:\\Users\\Carolina\\Documents\\FEUP\\5A\\1S\\CSN\\Lab\\Lab4\\dependency_networks\\Basque_syntactic_dependency_network.txt");
-	Graph g = readFiles("C:\\Users\\Carolina\\Documents\\FEUP\\5A\\1S\\CSN\\Lab\\Lab4\\dependency_networks\\test.txt");
+	Graph g = readFiles("C:\\Users\\Carolina\\Documents\\FEUP\\5A\\1S\\CSN\\Lab\\Lab4\\dependency_networks\\Basque_syntactic_dependency_network.txt");
+	//Graph g = readFiles("C:\\Users\\Carolina\\Documents\\FEUP\\5A\\1S\\CSN\\Lab\\Lab4\\dependency_networks\\test.txt");
 	cout << "::::::::real network::::::::\n N: " << g.N << "; E: " << g.E <<"\n";
+	//printGraph(g);
 	Graph er = ER(g.N, g.E);
 	cout << "::::::::ER network::::::::\n N: " << er.N << "; E: " << er.E << "\n";
+	//printGraph(er);
 	Graph switchn = switching(g);
 	cout << "::::::::Switching network::::::::\n N: " << switchn.N << "; E: " << switchn.E << "\n";
+	//printGraph(switchn);
 
 
 	system("pause");
