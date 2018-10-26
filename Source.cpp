@@ -158,7 +158,7 @@ float closenesscent(int i, Graph &g){
 float mclosenesscent(Graph &g){
 	float sum = 0;
 	for (int i = 1; i < g.N; i++){
-		sum += closenesscent(i,g);
+		sum += closenesscent(i, g);
 	}
 	return sum / (g.N*1.0);
 }
@@ -287,13 +287,13 @@ int main(){
 
 	Graph g = readFiles("C:\\Users\\Carolina\\Documents\\FEUP\\5A\\1S\\CSN\\Lab\\Lab4\\dependency_networks\\Basque_syntactic_dependency_network.txt");
 	//Graph g = readFiles("C:\\Users\\Carolina\\Documents\\FEUP\\5A\\1S\\CSN\\Lab\\Lab4\\dependency_networks\\test.txt");
-	cout << "::::::::real network::::::::\n N: " << g.N << "; E: " << g.E <<"\n";
+	cout << "::::::::real network::::::::\n N: " << g.N << "; E: " << g.E << "; C: "<< mclosenesscent(g) << "\n";
 	//printGraph(g);
 	Graph er = ER(g.N, g.E);
-	cout << "::::::::ER network::::::::\n N: " << er.N << "; E: " << er.E << "\n";
+	cout << "::::::::ER network::::::::\n N: " << er.N << "; E: " << er.E << "; C: " << mclosenesscent(er) << "\n";
 	//printGraph(er);
 	Graph switchn = switching(g);
-	cout << "::::::::Switching network::::::::\n N: " << switchn.N << "; E: " << switchn.E << "\n";
+	cout << "::::::::Switching network::::::::\n N: " << switchn.N << "; E: " << switchn.E << "; C: " << mclosenesscent(switchn) << "\n";
 	//printGraph(switchn);
 
 
