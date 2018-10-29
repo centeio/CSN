@@ -14,6 +14,8 @@
 
 using namespace std;
 
+ofstream outfile("out_night.txt", ios::out);
+
 
 struct Graph{
 	map<string, int> vertices;
@@ -60,6 +62,10 @@ int geo(int u, int v, Graph &g){ //addapted from https://www.geeksforgeeks.org/m
 
 	if (g.d[v][u] != -1){
 		return g.d[v][u];
+	}
+
+	if (g.adja[v].size() == 0 || g.adja[u].size() == 0){
+		return INT_MAX;
 	}
 	
 	if (g.adja[u].size() == 1){
@@ -149,6 +155,7 @@ float closenesscent(int i, Graph &g){
 	float sum = 0;
 	for (int j = 0; j < g.N; j++){
 		if (i != j){
+
 			sum += (1.0 / (geo(i, j, g)*1.0));
 		}
 	}
@@ -160,6 +167,25 @@ float mclosenesscent(Graph &g){
 	for (int i = 1; i < g.N; i++){
 		sum += closenesscent(i, g);
 	}
+	return sum / (g.N*1.0);
+}
+
+float minclosenesscent(Graph &g){
+	int M = 0.1*g.N;
+	float sum = 0;
+	for (int i = 1; i < M; i++){
+		sum += closenesscent(i, g);
+	}
+	return sum / (g.N*1.0);
+}
+
+float maxclosenesscent(Graph &g){
+	int M = 0.1*g.N;
+	float sum = 0;
+	for (int i = 1; i < M; i++){
+		sum += closenesscent(i, g);
+	}
+	sum += g.N - M;
 	return sum / (g.N*1.0);
 }
 
@@ -185,6 +211,8 @@ Graph readFiles(string filename){
 	while (gfile >> vi >> vj) {
 		if (addEdge(vi, vj, g))
 			edges++;
+		//cout << edges << "\n";
+		outfile << edges << "\n";
 	}
 
 	return g;
@@ -211,91 +239,108 @@ Graph ER(int N, int E){
 		if (addEdgeint(u, v, g)){
 			counter = counter + 1;
 		}
+		outfile << counter << "\n";
+		//cout << counter << "\n";
 	}
 	g.E = counter;
 	return g;
 }
 
-Graph switching(Graph g){
-	Graph newg;
-	newg.N = g.N;
-	newg.E = g.E;
-	newg.adja = g.adja;
-	int Q = newg.N*log(newg.N);
-	int QE = Q*newg.E;
-
-	for (int i = 0; i < newg.N; i++) {
-		vector<int> dists(newg.N, -1);
-		newg.d.push_back(dists);
-	}
+Graph switching(Graph oldg){
+	Graph g = oldg;
+	int Q = log(g.E);
+	int QE = Q*g.E;
 
 	for (int i = 0; i < QE; i++){
 		int n1, n2, n3, n4, posn3, posn4;
+		outfile << i << "\n";
+		//cout << i << "\n";
 		
 		do{
 			do{
-				n1 = rand() % newg.N;
-				n2 = rand() % newg.N;
-			} while (!(n1 != n2 && newg.adja[n1].size() > 0 && newg.adja[n2].size() > 0));
+				n1 = rand() % g.N;
+				n2 = rand() % g.N;
+			} while (!(n1 != n2 && g.adja[n1].size() > 0 && g.adja[n2].size() > 0));
 
-			posn3 = rand() % newg.adja[n1].size();
-			posn4 = rand() % newg.adja[n2].size();
+			posn3 = rand() % g.adja[n1].size();
+			posn4 = rand() % g.adja[n2].size();
 
-			n3 = newg.adja[n1][posn3];
-			n4 = newg.adja[n2][posn4];
+			n3 = g.adja[n1][posn3];
+			n4 = g.adja[n2][posn4];
 		} while (n3 == n4 || n2 == n3 || n1 == n4 );
 		//while (n3 == n4);
 
 		//cout << "n1: " << n1 << " " << "n3: " << n3 << " " << "n2: " << n2 << " " << "n4: " << n4 << "\n";
 
 
-		//cout << "newg.adja size: " << newg.adja.size() << "\n";
+		//cout << "g.adja size: " << g.adja.size() << "\n";
 
 		//-1 distance matrix
-		for (int i = 0; i < newg.d.size(); i++) {
-			for (int j = 0; j < newg.d[i].size(); j++){
-				newg.d[i][j] = -1;
+		for (int i = 0; i < g.d.size(); i++) {
+			for (int j = 0; j < g.d[i].size(); j++){
+				g.d[i][j] = -1;
 			}
 		}
 
 		//erase edges
-		newg.adja[n1].erase(newg.adja[n1].begin() + posn3);
-		newg.adja[n3].erase(find(newg.adja[n3].begin(), newg.adja[n3].end(), n1));
-		newg.adja[n2].erase(newg.adja[n2].begin() + posn4);
-		newg.adja[n4].erase(find(newg.adja[n4].begin(), newg.adja[n4].end(), n2));
+		g.adja[n1].erase(g.adja[n1].begin() + posn3);
+		g.adja[n3].erase(find(g.adja[n3].begin(), g.adja[n3].end(), n1));
+		g.adja[n2].erase(g.adja[n2].begin() + posn4);
+		g.adja[n4].erase(find(g.adja[n4].begin(), g.adja[n4].end(), n2));
 
-		if (!addEdgeint(n1, n2, newg)){
-			addEdgeint(n1, n3, newg);
-			addEdgeint(n2, n4, newg);
+		if (!addEdgeint(n1, n2, g)){
+			addEdgeint(n1, n3, g);
+			addEdgeint(n2, n4, g);
 			continue;
 		}
-		if (!addEdgeint(n3, n4, newg)){
+		if (!addEdgeint(n3, n4, g)){
 			//find position of n2 in adjacency of n1
 			//erase edge
-			newg.adja[n1].erase(find(newg.adja[n1].begin(), newg.adja[n1].end(), n2));
-			newg.adja[n2].erase(find(newg.adja[n2].begin(), newg.adja[n2].end(), n1));
-			addEdgeint(n1, n3, newg);
-			addEdgeint(n2, n4, newg);
+			g.adja[n1].erase(find(g.adja[n1].begin(), g.adja[n1].end(), n2));
+			g.adja[n2].erase(find(g.adja[n2].begin(), g.adja[n2].end(), n1));
+			addEdgeint(n1, n3, g);
+			addEdgeint(n2, n4, g);
 		}
 	}
-	return newg;
+	return g;
 
 }
 
 int main(){
 	srand(time(NULL));
 
+	
 	Graph g = readFiles("C:\\Users\\Carolina\\Documents\\FEUP\\5A\\1S\\CSN\\Lab\\Lab4\\dependency_networks\\Basque_syntactic_dependency_network.txt");
 	//Graph g = readFiles("C:\\Users\\Carolina\\Documents\\FEUP\\5A\\1S\\CSN\\Lab\\Lab4\\dependency_networks\\test.txt");
-	cout << "::::::::real network::::::::\n N: " << g.N << "; E: " << g.E << "; C: "<< mclosenesscent(g) << "\n";
-	//printGraph(g);
-	Graph er = ER(g.N, g.E);
-	cout << "::::::::ER network::::::::\n N: " << er.N << "; E: " << er.E << "; C: " << mclosenesscent(er) << "\n";
-	//printGraph(er);
-	Graph switchn = switching(g);
-	cout << "::::::::Switching network::::::::\n N: " << switchn.N << "; E: " << switchn.E << "; C: " << mclosenesscent(switchn) << "\n";
-	//printGraph(switchn);
+	float x = mclosenesscent(g);
+	cout << "::::::::real network::::::::\n N: " << g.N << "; E: " << g.E << "; C: "<< x << "\n";
+	outfile << "::::::::real network::::::::\n N: " << g.N << "; E: " << g.E << "; C: " << x << "\n";
 
+
+	//printGraph(g);
+	cout << "::::::::Switching network::::::::\n";
+	Graph sw = switching(g);
+	float lb = minclosenesscent(sw);
+	float ub = maxclosenesscent(sw);
+	if (ub < x)
+		cout << "0";
+	if (lb >= x)
+		cout << "1";
+	//cout << "::::::::Switching network::::::::\n N: " << g.N << "; E: " << g.E << "; C: " << mclosenesscent(g) << "\n";
+	//outfile << "::::::::Switching network::::::::\n N: " << g.N << "; E: " << g.E << "; C: " << mclosenesscent(g) << "\n";
+
+
+	//printGraph(switchn);
+/*	int N = g.N;
+	int E = g.E;
+	delete &g;
+	Graph er = ER(12207, 25558);
+	cout << "::::::::ER network::::::::\n N: " << er.N << "; E: " << er.E << "; C: " << mclosenesscent(er) << "\n";
+	outfile << "::::::::ER network::::::::\n N: " << er.N << "; E: " << er.E << "; C: " << mclosenesscent(er) << "\n";
+
+
+	//printGraph(er);
+	delete &er;*/
 
 	system("pause");
 
