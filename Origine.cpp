@@ -11,11 +11,18 @@
 #include <fstream>
 #include <time.h>
 #include <cstring>
+#include <omp.h>
+#include <stdio.h>
+#include <windows.h>
+#include <ppl.h>
+//#include <iostream>
+#include <algorithm>
+#include <array>
 #endif
 
 using namespace std;
 
-ofstream outfile("out_night.txt", ios::out);
+//ofstream outfile("out_night.txt", ios::out);
 
 int order = 1; //0 for default, 1 for random, 2 for crescent sorting, 3 for descrescent sorting
 vector<int> shuffled;
@@ -217,8 +224,9 @@ int boundclosenesscent(Graph &g, float cx) {
 			cout << "value of ub closeness: " << sum << "\n";
 			return 0;
 		}
-		cout << "min: " << sum << "max: " << max << "\n";
+		cout << "min: " << sum << " max: " << max << "\n";
 	}
+	return 0;
 }
 
 bool sortdec(int u, int v) {
@@ -287,7 +295,7 @@ Graph readFiles(string filename) {
 		if (addEdge(vi, vj, g))
 			edges++;
 		//cout << edges << "\n";
-		outfile << edges << "\n";
+		//outfile << edges << "\n";
 	}
 
 	//sort edges?
@@ -351,7 +359,7 @@ Graph ER(int N, int E) {
 		if (addEdgeint(u, v, g)) {
 			counter = counter + 1;
 		}
-		outfile << counter << "\n";
+		//outfile << counter << "\n";
 		//cout << counter << "\n";
 	}
 	g.E = counter;
@@ -366,6 +374,11 @@ Graph switching(Graph oldg) {
 	//cout << "number of iterations: " << QE << "\n";
 	
 	cout << "new distance matrix for new graph \n";
+
+	//A = g.d;
+	//std::vector<std::vector<int> > A(g.d.size(), std::vector<int>(N, -1));
+	
+	
 	for (int i = 0; i < g.d.size(); i++) {
 		for (int j = 0; j < g.d[i].size(); j++) {
 			g.d[i][j] = -1;
@@ -428,38 +441,52 @@ Graph switching(Graph oldg) {
 
 int main() {
 	srand(time(NULL));
-	order = 2;
+	order = 3;
 	
-	Graph g = readFiles("C:\\Users\\fpier\\OneDrive - uniroma1.it\\MS Data Science\\Complex Social Network\\HW\\HW3\\dependency_networks\\Basque_syntactic_dependency_network.txt");
+	Graph g = readFiles("C:\\Users\\fpier\\OneDrive - uniroma1.it\\MS Data Science\\Complex Social Network\\HW\\HW3\\dependency_networks\\Italian_syntactic_dependency_network.txt");
 	//Graph g = readFiles("C:\\Users\\fpier\\OneDrive - uniroma1.it\\MS Data Science\\Complex Social Network\\HW\\HW3\\dependency_networks\\test.txt");
 	float x = apprxclosenesscent(g);
 	cout << "::::::::real network::::::::\n N: " << g.N << "; E: " << g.E << "; C: " << x << "\n";
-	//outfile << "::::::::real network::::::::\n N: " << g.N << "; E: " << g.E << "; C: " << x << "\n";
 
-	//int T = 21;
+	int T = 21;
 
-	Graph sw;
-	float count_sw=0;
-	//for (int i = 0; i < T; i++) {
-	//cout << "::::::::Switching network::::::::\n";
-	sw = switching(g);
-	sw.opt = true;
-	cout << "graph created \n";
-	count_sw += boundclosenesscent(sw,x);
-		//if (ub < x)
-		//	cout << "0";
-		//if (lb >= x)
-		//	count_sw += 1;
+	//Graph sw;
+	//float count_sw=0;
+	/*
+	for (int i = 0; i < 21; i++) {
+		cout << "::::::::Switching network::::::::\n";
+		sw = switching(g);
+		sw.opt = true;
+		cout << "graph created \n";
+		count_sw += boundclosenesscent(sw, x);
+		//outfile << "Sw: p(X_nh > X) = " << count_sw << "\n";
+	}
+    outfile << "Final: p(X_nh > X) = " << count_sw <<"\n";
+	*/
 
-//	}
-    cout << "Sw: p(X_nh > X) = " << count_sw <<"\n";
-
-
+	Graph er;
+	float count_er = 0;
+	int N = g.N;
+	int E = g.E;
 	
-
-
-	//cout << "::::::::Switching network::::::::\n N: " << g.N << "; E: " << g.E << "; C: " << mclosenesscent(g) << "\n";
-	//outfile << "::::::::Switching network::::::::\n N: " << g.N << "; E: " << g.E << "; C: " << mclosenesscent(g) << "\n";
+	for (int i = 0; i < 21; i++) {
+		cout << "::::::::Switching network::::::::\n";
+		er = ER(N,E);
+		//sw.opt = true;
+		cout << "graph created \n";
+		count_er += boundclosenesscent(er, x);
+		//outfile << "Sw: p(X_nh > X) = " << count_sw << "\n";
+	}
+	cout<< "Final: p(X_nh > X) = " << count_er <<"\n";
+	
+	/*
+	// 1st iteration
+	cout << "::::::::Switching network::::::::\n";
+	sw = switching(g);
+	cout << "::::::::Graph Created :::::::::::\n";
+	sw.opt = true;
+	cout << "::::::::Evaluating f(x)::::::::::\n";
+	count_sw += boundclosenesscent(sw, x);
 
 
 	//printGraph(switchn);
@@ -468,21 +495,27 @@ int main() {
 	//delete &g;
 	//Graph er = ER(12207, 25558);
 	//cout << "::::::::ER network::::::::\n N: " << er.N << "; E: " << er.E << "; C: " << mclosenesscent(er) << "\n";
-	//outfile << "::::::::ER network::::::::\n N: " << er.N << "; E: " << er.E << "; C: " << mclosenesscent(er) << "\n";
+
 
 
 	//printGraph(er);
 	//delete &er;
 	
-	
-	vector<vector<int> > a;
-	for (int i = 0; i < 10; i++) {
-		for (int j = 0; j < 10; j++) {
-			//a[i][j] = -1;
-			memset(&a, 0, sizeof(a[0][0]) * i * j);
-		}
-	}
+	cout << "::::::::Deleting old graph:::::::\n";
+	//delete &sw;
 
+	//cl.exe /EHsc Origine.cpp
+	system("pause");
+	cout << "::::::::Initialising new graph:::\n";
+	Graph sw2;
+	cout << "::::::::ER network:::::::::::::::\n";
+	Graph er = ER(12207, 25558);
+	cout << "::::::::Graph Created :::::::::::\n";
+	sw.opt = true;
+	cout << "::::::::Evaluating f(x)::::::::::\n";
+	count_sw += boundclosenesscent(er, x);
+	
+	*/
 	system("pause");
 
 }
